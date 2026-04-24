@@ -40,7 +40,7 @@ export default function Sidebar({ open, isMobile, onClose }) {
           </div>
           <div style={S.logoText}>
             <div style={S.logoTitle}>SecureEdu</div>
-            <div style={S.logoSub}>Kiberhavfsizlik</div>
+            <div style={S.logoSub}>Xavfsizlik Siyosati</div>
           </div>
           {isMobile && (
             <button style={S.closeBtn} onClick={onClose}>

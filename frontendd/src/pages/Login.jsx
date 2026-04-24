@@ -1,6 +1,5 @@
 import { useState } from "react";
 import API from "../api";
-import { IcoPlay, IcoShield, IcoLock, IcoTrendUp, IcoAlertTriangle } from "../components/Icons";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -18,9 +17,16 @@ export default function Login() {
     setError("");
     try {
       const res = await API.post("/login", { username, password });
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role);
-      localStorage.setItem("username", username);
+      if (res.data.error) {
+        setError(res.data.error);
+        return;
+      }
+      localStorage.setItem("token",      res.data.token);
+      localStorage.setItem("role",       res.data.role);
+      localStorage.setItem("username",   username);
+      localStorage.setItem("full_name",  res.data.full_name || username);
+      localStorage.setItem("department", res.data.department || "");
+      localStorage.setItem("user_id",    res.data.user_id);
       window.location.href = "/";
     } catch {
       setError("Login yoki parol noto'g'ri");
@@ -31,7 +37,6 @@ export default function Login() {
 
   return (
     <div style={S.page}>
-      {/* Left decorative panel (hidden on mobile via CSS) */}
       <div className="login-left" style={S.left}>
         <div style={S.leftInner}>
           <div style={S.brand}>
@@ -42,26 +47,26 @@ export default function Login() {
             </div>
             <div>
               <div style={S.brandName}>SecureEdu</div>
-              <div style={S.brandSub}>Kiberhavfsizlik platformasi</div>
+              <div style={S.brandSub}>Korporativ Xavfsizlik Platformasi</div>
             </div>
           </div>
 
           <div style={S.heroText}>
-            <h1 style={S.heroH}>Raqamli xavfsizlikni o'rgan.</h1>
+            <h1 style={S.heroH}>Xavfsizlik siyosatini o'rganing.</h1>
             <p style={S.heroP}>
-              Zamonaviy kibertahdidlardan himoyalanish uchun interaktiv kurslar, testlar va amaliy ko'nikmalar.
+              Korxona xodimlari uchun axborot xavfsizligi bo'yicha interaktiv o'quv kurslari, testlar va amaliy ko'nikmalar.
             </p>
           </div>
 
           <div style={S.features}>
             {[
-              { Icon: IcoPlay,     text: "Interaktiv video darslar"   },
-              { Icon: IcoShield,   text: "Bilim tekshirish testlari"  },
-              { Icon: IcoLock,     text: "Parol xavfsizligi tahlili"  },
-              { Icon: IcoTrendUp,  text: "Shaxsiy progress kuzatish"  },
+              { text: "Korporativ xavfsizlik siyosati" },
+              { text: "Fishing va firibgarlikdan himoya" },
+              { text: "Parol va autentifikatsiya" },
+              { text: "Hodisa xabar berish tartibi" },
             ].map(f => (
               <div key={f.text} style={S.feat}>
-                <span style={S.featIcon}><f.Icon size={15} /></span>
+                <span style={S.featDot} />
                 <span style={S.featText}>{f.text}</span>
               </div>
             ))}
@@ -69,10 +74,8 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right — form panel */}
       <div className="login-right" style={S.right}>
         <div style={S.card}>
-          {/* Mobile logo */}
           <div style={S.mobileLogo}>
             <div style={S.brandIcon}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -83,7 +86,7 @@ export default function Login() {
           </div>
 
           <h2 style={S.formTitle}>Xush kelibsiz</h2>
-          <p style={S.formSub}>Hisobingizga kiring</p>
+          <p style={S.formSub}>Korporativ hisobingizga kiring</p>
 
           {error && (
             <div style={S.errBox}>
@@ -144,18 +147,10 @@ export default function Login() {
             onClick={login}
             disabled={loading}
           >
-            {loading
-              ? <span style={S.spinner} />
-              : <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z"/>
-                  </svg>
-                  Kirish
-                </>
-            }
+            {loading ? <span style={S.spinner} /> : "Kirish"}
           </button>
 
-          <p style={S.hint}>Muammo bo'lsa, administrator bilan bog'laning</p>
+          <p style={S.hint}>Muammo bo'lsa, IT bo'limi yoki administrator bilan bog'laning</p>
         </div>
       </div>
 
@@ -172,12 +167,11 @@ export default function Login() {
 
 const S = {
   page: { display: "flex", minHeight: "100vh" },
-
   left: {
     flex: "0 0 460px",
     background: "linear-gradient(160deg,#0f172a 0%,#1e1b4b 55%,#2d1b69 100%)",
     display: "flex", alignItems: "center", justifyContent: "center",
-    padding: "48px 48px",
+    padding: "48px",
     position: "relative", overflow: "hidden",
   },
   leftInner: { display: "flex", flexDirection: "column", gap: "40px", width: "100%" },
@@ -192,21 +186,21 @@ const S = {
   },
   brandName: { color: "#fff", fontWeight: 800, fontSize: "18px" },
   brandSub:  { color: "rgba(255,255,255,0.4)", fontSize: "11px", marginTop: "2px" },
-
   heroText: {},
-  heroH: { color: "#fff", fontSize: "30px", fontWeight: 700, lineHeight: 1.25, margin: "0 0 12px" },
+  heroH: { color: "#fff", fontSize: "28px", fontWeight: 700, lineHeight: 1.25, margin: "0 0 12px" },
   heroP: { color: "rgba(255,255,255,0.5)", fontSize: "14px", lineHeight: 1.7 },
-
   features: { display: "flex", flexDirection: "column", gap: "10px" },
   feat: {
     display: "flex", alignItems: "center", gap: "12px",
     background: "rgba(255,255,255,0.05)",
     border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: "var(--radius-md)", padding: "11px 14px",
+    borderRadius: "10px", padding: "11px 14px",
   },
-  featIcon: { fontSize: "15px", color: "#aa3bff", width: "20px", textAlign: "center" },
+  featDot: {
+    width: "7px", height: "7px", borderRadius: "50%",
+    background: "#aa3bff", flexShrink: 0,
+  },
   featText: { color: "rgba(255,255,255,0.65)", fontSize: "13px", fontWeight: 500 },
-
   right: {
     flex: 1, display: "flex",
     alignItems: "center", justifyContent: "center",
@@ -219,64 +213,41 @@ const S = {
     padding: "36px 32px",
     boxShadow: "0 8px 40px rgba(0,0,0,0.09)",
   },
-  mobileLogo: {
-    display: "none",
-    alignItems: "center", gap: "10px",
-    marginBottom: "24px",
-    justifyContent: "center",
-  },
-  formTitle: { fontSize: "22px", fontWeight: 800, color: "var(--text-h)", margin: "0 0 4px" },
-  formSub:   { color: "var(--text-muted)", fontSize: "13px", marginBottom: "24px" },
-
+  mobileLogo: { display: "none", alignItems: "center", gap: "10px", marginBottom: "24px", justifyContent: "center" },
+  formTitle: { fontSize: "22px", fontWeight: 800, color: "#111827", margin: "0 0 4px" },
+  formSub:   { color: "#6b7280", fontSize: "13px", marginBottom: "24px" },
   errBox: {
     display: "flex", alignItems: "center", gap: "8px",
-    background: "var(--error-light)",
-    border: "1.5px solid rgba(220,38,38,0.2)",
-    color: "var(--error)",
-    borderRadius: "var(--radius-sm)",
+    background: "#fef2f2", border: "1.5px solid rgba(220,38,38,0.2)",
+    color: "#dc2626", borderRadius: "8px",
     padding: "10px 14px", fontSize: "13px",
     fontWeight: 600, marginBottom: "20px",
   },
-
   field:  { marginBottom: "16px" },
-  label:  { display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "7px", letterSpacing: "0.01em" },
+  label:  { display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "7px" },
   wrap:   { position: "relative", display: "flex", alignItems: "center" },
   ico:    { position: "absolute", left: "12px", color: "#9ca3af", display: "flex", pointerEvents: "none" },
   input:  {
-    width: "100%",
-    padding: "11px 40px 11px 38px",
-    border: "1.5px solid var(--border)",
-    borderRadius: "var(--radius-sm)",
-    fontSize: "14px", color: "var(--text-h)",
+    width: "100%", padding: "11px 40px 11px 38px",
+    border: "1.5px solid #e5e7eb", borderRadius: "8px",
+    fontSize: "14px", color: "#111827",
     background: "#fafafa", outline: "none",
-    transition: "border-color 0.2s, box-shadow 0.2s",
   },
-  eyeBtn: {
-    position: "absolute", right: "10px",
-    background: "none", border: "none",
-    cursor: "pointer", color: "#9ca3af",
-    display: "flex", padding: "4px",
-  },
-
+  eyeBtn: { position: "absolute", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", display: "flex", padding: "4px" },
   btn: {
-    width: "100%", marginTop: "6px",
-    padding: "13px",
+    width: "100%", marginTop: "6px", padding: "13px",
     background: "linear-gradient(135deg,#aa3bff,#7c3aed)",
-    color: "#fff", border: "none",
-    borderRadius: "var(--radius-sm)",
-    fontSize: "14px", fontWeight: 700,
-    cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+    color: "#fff", border: "none", borderRadius: "8px",
+    fontSize: "14px", fontWeight: 700, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
     boxShadow: "0 4px 18px rgba(170,59,255,0.35)",
-    transition: "opacity 0.2s, transform 0.15s",
   },
   spinner: {
     width: "18px", height: "18px",
     border: "2.5px solid rgba(255,255,255,0.3)",
-    borderTopColor: "#fff",
-    borderRadius: "50%",
+    borderTopColor: "#fff", borderRadius: "50%",
     display: "inline-block",
     animation: "spin 0.7s linear infinite",
   },
-  hint: { textAlign: "center", color: "var(--text-muted)", fontSize: "12px", marginTop: "18px" },
+  hint: { textAlign: "center", color: "#9ca3af", fontSize: "12px", marginTop: "18px" },
 };

@@ -2,155 +2,258 @@ import { useEffect, useState } from "react";
 import API from "../api";
 import {
   IcoUsers, IcoBook, IcoCheckCircle, IcoBarChart,
-  IcoPlus, IcoUser, IcoSettings, IcoShield,
-  IcoInbox, IcoChevronRight
+  IcoPlus, IcoShield, IcoInbox, IcoX
 } from "../components/Icons";
 
-const STATS = [
-  { key: "users",    label: "Foydalanuvchilar", Icon: IcoUsers,       color: "#aa3bff" },
-  { key: "mats",     label: "Materiallar",      Icon: IcoBook,        color: "#3b82f6" },
-  { key: "sessions", label: "Faol sessiyalar",  Icon: IcoCheckCircle, color: "#10b981" },
-  { key: "tests",    label: "Umumiy testlar",   Icon: IcoBarChart,    color: "#f59e0b" },
-];
+const DEPT_COLORS = {
+  "IT bo'limi":      "#aa3bff",
+  "Moliya bo'limi":  "#3b82f6",
+  "HR bo'limi":      "#10b981",
+  "Marketing":       "#f59e0b",
+  "Boshqaruv":       "#ef4444",
+  "IT":              "#aa3bff",
+};
 
-const ACTIONS = [
-  { Icon: IcoPlus,     label: "Material qo'shish",        color: "#aa3bff" },
-  { Icon: IcoUser,     label: "Foydalanuvchi qo'shish",   color: "#3b82f6" },
-  { Icon: IcoBarChart, label: "Hisobot ko'rish",          color: "#10b981" },
-  { Icon: IcoSettings, label: "Sozlamalar",               color: "#f59e0b" },
-];
-
-const StatCard = ({ Icon, label, value, color }) => (
-  <div style={{ ...S.stat, borderLeft: `4px solid ${color}` }}>
-    <div style={{ ...S.statIcon, color, background: color + "15" }}>
-      <Icon size={20} />
-    </div>
-    <div>
-      <div style={S.statVal}>{value}</div>
-      <div style={S.statLabel}>{label}</div>
-    </div>
-  </div>
-);
+function deptColor(dept) {
+  return DEPT_COLORS[dept] || "#6b7280";
+}
 
 export default function Admin() {
-  const [users, setUsers] = useState([]);
+  const [users,     setUsers]     = useState([]);
   const [materials, setMaterials] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stats,     setStats]     = useState({ total_users: 0, total_materials: 0, completed_users: 0 });
+  const [loading,   setLoading]   = useState(true);
+  const [tab,       setTab]       = useState("users");
 
-  useEffect(() => {
+  // Add user form
+  const [showForm,  setShowForm]  = useState(false);
+  const [form,      setForm]      = useState({ username: "", password: "", full_name: "", department: "", role: "employee" });
+  const [formErr,   setFormErr]   = useState("");
+  const [saving,    setSaving]    = useState(false);
+
+  // Add material form
+  const [showMatForm, setShowMatForm] = useState(false);
+  const [matForm,     setMatForm]     = useState({ title: "", video_url: "", description: "", category: "Xavfsizlik Siyosati" });
+  const [matErr,      setMatErr]      = useState("");
+  const [matSaving,   setMatSaving]   = useState(false);
+
+  const fetchAll = () => {
+    setLoading(true);
     Promise.all([
       API.get("/users").catch(() => ({ data: [] })),
       API.get("/materials").catch(() => ({ data: [] })),
-    ]).then(([u, m]) => {
+      API.get("/stats").catch(() => ({ data: { total_users: 0, total_materials: 0, completed_users: 0 } })),
+    ]).then(([u, m, s]) => {
       setUsers(u.data);
       setMaterials(m.data);
+      setStats(s.data);
     }).finally(() => setLoading(false));
-  }, []);
-
-  const statValues = {
-    users:    loading ? "..." : users.length,
-    mats:     loading ? "..." : materials.length,
-    sessions: "1",
-    tests:    "5",
   };
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const handleAddUser = async () => {
+    if (!form.username || !form.password) { setFormErr("Username va parol majburiy"); return; }
+    setSaving(true); setFormErr("");
+    try {
+      await API.post("/users", form);
+      setForm({ username: "", password: "", full_name: "", department: "", role: "employee" });
+      setShowForm(false);
+      fetchAll();
+    } catch (e) {
+      setFormErr(e.response?.data?.detail || "Xatolik yuz berdi");
+    } finally { setSaving(false); }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm("Foydalanuvchini o'chirasizmi?")) return;
+    await API.delete(`/users/${id}`).catch(() => {});
+    fetchAll();
+  };
+
+  const handleAddMaterial = async () => {
+    if (!matForm.title || !matForm.video_url) { setMatErr("Sarlavha va video URL majburiy"); return; }
+    setMatSaving(true); setMatErr("");
+    try {
+      await API.post("/materials", matForm);
+      setMatForm({ title: "", video_url: "", description: "", category: "Xavfsizlik Siyosati" });
+      setShowMatForm(false);
+      fetchAll();
+    } catch (e) {
+      setMatErr(e.response?.data?.detail || "Xatolik yuz berdi");
+    } finally { setMatSaving(false); }
+  };
+
+  const handleDeleteMaterial = async (id) => {
+    if (!window.confirm("Materialni o'chirasizmi?")) return;
+    await API.delete(`/materials/${id}`).catch(() => {});
+    fetchAll();
+  };
+
+  const STAT_CARDS = [
+    { label: "Xodimlar",          value: loading ? "..." : stats.total_users,     color: "#aa3bff", Icon: IcoUsers },
+    { label: "Materiallar",       value: loading ? "..." : stats.total_materials, color: "#3b82f6", Icon: IcoBook },
+    { label: "Tugatgan xodimlar", value: loading ? "..." : stats.completed_users, color: "#10b981", Icon: IcoCheckCircle },
+    { label: "Quiz savollar",     value: "10",                                    color: "#f59e0b", Icon: IcoBarChart },
+  ];
 
   return (
     <div style={S.page}>
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Admin Panel</h1>
-          <p style={S.sub}>Platformani boshqarish markazi</p>
+          <p style={S.sub}>Korporativ xavfsizlik platformasini boshqarish</p>
         </div>
-        <div style={S.adminBadge}>
-          <IcoShield size={14} />
-          Administrator
-        </div>
+        <div style={S.adminBadge}><IcoShield size={14} /> Administrator</div>
       </div>
 
-      <div className="stats-grid" style={S.statsGrid}>
-        {STATS.map(s => (
-          <StatCard key={s.key} Icon={s.Icon} label={s.label} value={statValues[s.key]} color={s.color} />
+      {/* Stats */}
+      <div style={S.statsGrid}>
+        {STAT_CARDS.map(s => (
+          <div key={s.label} style={{ ...S.stat, borderLeft: `4px solid ${s.color}` }}>
+            <div style={{ ...S.statIcon, color: s.color, background: s.color + "15" }}><s.Icon size={20} /></div>
+            <div>
+              <div style={S.statVal}>{s.value}</div>
+              <div style={S.statLabel}>{s.label}</div>
+            </div>
+          </div>
         ))}
       </div>
 
-      <div className="admin-cols" style={S.cols}>
-        {/* Quick actions */}
-        <div style={S.card}>
-          <h3 style={S.cardTitle}>Tezkor amallar</h3>
-          <div style={S.actions}>
-            {ACTIONS.map(a => (
-              <button key={a.label} style={S.actionBtn}>
-                <div style={{ ...S.actionIcon, background: a.color + "15", color: a.color }}>
-                  <a.Icon size={16} />
-                </div>
-                <span style={S.actionLabel}>{a.label}</span>
-                <IcoChevronRight size={14} style={{ color: "var(--text-muted)", marginLeft: "auto" }} />
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Tabs */}
+      <div style={S.tabs}>
+        {[
+          { key: "users",     label: `Xodimlar (${users.filter(u => u.role !== "admin").length})` },
+          { key: "materials", label: `Materiallar (${materials.length})` },
+        ].map(t => (
+          <button key={t.key} style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Users */}
+      {/* USERS TAB */}
+      {tab === "users" && (
         <div style={S.card}>
-          <h3 style={S.cardTitle}>Foydalanuvchilar</h3>
+          <div style={S.cardHead}>
+            <h3 style={{ ...S.cardTitle, margin: 0 }}>Xodimlar ro'yxati</h3>
+            <button style={S.addBtn} onClick={() => setShowForm(v => !v)}>
+              <IcoPlus size={14} /> Xodim qo'shish
+            </button>
+          </div>
+
+          {showForm && (
+            <div style={S.form}>
+              {formErr && <div style={S.formErr}>{formErr}</div>}
+              <div style={S.formRow}>
+                <input style={S.inp} placeholder="Username *" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
+                <input style={S.inp} placeholder="Parol *" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+              </div>
+              <div style={S.formRow}>
+                <input style={S.inp} placeholder="To'liq ism" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
+                <input style={S.inp} placeholder="Bo'lim (IT, HR...)" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+              </div>
+              <div style={S.formRow}>
+                <select style={S.inp} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                  <option value="employee">Xodim</option>
+                  <option value="admin">Administrator</option>
+                </select>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button style={S.saveBtn} onClick={handleAddUser} disabled={saving}>{saving ? "..." : "Saqlash"}</button>
+                  <button style={S.cancelBtn} onClick={() => setShowForm(false)}>Bekor</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div style={S.loadingBox}>Yuklanmoqda...</div>
-          ) : users.length === 0 ? (
-            <div style={S.emptyBox}>
-              <div style={S.emptyIcon}><IcoUsers size={28} style={{ color: "var(--text-muted)" }} /></div>
-              <p>Foydalanuvchilar yo'q</p>
-            </div>
+          ) : users.filter(u => u.role !== "admin").length === 0 ? (
+            <div style={S.emptyBox}><div style={S.emptyIcon}><IcoUsers size={28} /></div><p>Xodimlar yo'q</p></div>
           ) : (
             <div style={S.list}>
-              {users.map((u, i) => (
+              {users.filter(u => u.role !== "admin").map((u, i) => (
                 <div key={u.id || i} style={S.userRow}>
-                  <div style={S.userAvatar}>{(u.username || "U")[0].toUpperCase()}</div>
+                  <div style={S.userAvatar}>{(u.full_name || u.username || "U")[0].toUpperCase()}</div>
                   <div style={S.userInfo}>
-                    <div style={S.userName}>{u.username}</div>
-                    <div style={S.userRole}>{u.role || "employee"}</div>
+                    <div style={S.userName}>{u.full_name || u.username}</div>
+                    <div style={S.userMeta}>
+                      <span style={S.userUsername}>@{u.username}</span>
+                      {u.department && (
+                        <span style={{ ...S.deptTag, background: deptColor(u.department) + "18", color: deptColor(u.department) }}>
+                          {u.department}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span style={{
-                    ...S.badge,
-                    background: u.role === "admin" ? "var(--accent-light)" : "var(--success-light)",
-                    color:      u.role === "admin" ? "var(--accent)"       : "var(--success)",
-                  }}>
-                    {u.role || "employee"}
-                  </span>
+                  <button style={S.delBtn} onClick={() => handleDeleteUser(u.id)} title="O'chirish">
+                    <IcoX size={13} />
+                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Materials table */}
-      <div style={S.card}>
-        <div style={S.cardHead}>
-          <h3 style={{ ...S.cardTitle, margin: 0 }}>Materiallar ro'yxati</h3>
-          <span style={S.countPill}>{materials.length} ta</span>
-        </div>
-        {loading ? (
-          <div style={S.loadingBox}>Yuklanmoqda...</div>
-        ) : materials.length === 0 ? (
-          <div style={S.emptyBox}>
-            <div style={S.emptyIcon}><IcoInbox size={28} style={{ color: "var(--text-muted)" }} /></div>
-            <p>Materiallar yo'q</p>
+      {/* MATERIALS TAB */}
+      {tab === "materials" && (
+        <div style={S.card}>
+          <div style={S.cardHead}>
+            <h3 style={{ ...S.cardTitle, margin: 0 }}>Materiallar ro'yxati</h3>
+            <button style={S.addBtn} onClick={() => setShowMatForm(v => !v)}>
+              <IcoPlus size={14} /> Material qo'shish
+            </button>
           </div>
-        ) : (
-          <div style={S.list}>
-            {materials.map((m, i) => (
-              <div key={m.id || i} style={S.matRow}>
-                <div style={S.matNum}>{i + 1}</div>
-                <div style={S.matInfo}>
-                  <div style={S.matTitle}>{m.title}</div>
-                  {m.video_url && <div style={S.matUrl}>{m.video_url}</div>}
-                </div>
-                <span style={S.matBadge}>Video</span>
+
+          {showMatForm && (
+            <div style={S.form}>
+              {matErr && <div style={S.formErr}>{matErr}</div>}
+              <div style={S.formRow}>
+                <input style={S.inp} placeholder="Sarlavha *" value={matForm.title} onChange={e => setMatForm(f => ({ ...f, title: e.target.value }))} />
+                <select style={S.inp} value={matForm.category} onChange={e => setMatForm(f => ({ ...f, category: e.target.value }))}>
+                  <option>Xavfsizlik Siyosati</option>
+                  <option>Fishing va Firibgarlik</option>
+                  <option>Parol Xavfsizligi</option>
+                  <option>Qurilma Xavfsizligi</option>
+                  <option>Hodisa Boshqaruvi</option>
+                  <option>Umumiy</option>
+                </select>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <input style={{ ...S.inp, width: "100%", marginBottom: "10px" }} placeholder="YouTube URL *" value={matForm.video_url} onChange={e => setMatForm(f => ({ ...f, video_url: e.target.value }))} />
+              <input style={{ ...S.inp, width: "100%", marginBottom: "10px" }} placeholder="Tavsif (ixtiyoriy)" value={matForm.description} onChange={e => setMatForm(f => ({ ...f, description: e.target.value }))} />
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button style={S.saveBtn} onClick={handleAddMaterial} disabled={matSaving}>{matSaving ? "..." : "Saqlash"}</button>
+                <button style={S.cancelBtn} onClick={() => setShowMatForm(false)}>Bekor</button>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div style={S.loadingBox}>Yuklanmoqda...</div>
+          ) : materials.length === 0 ? (
+            <div style={S.emptyBox}><div style={S.emptyIcon}><IcoInbox size={28} /></div><p>Materiallar yo'q</p></div>
+          ) : (
+            <div style={S.list}>
+              {materials.map((m, i) => (
+                <div key={m.id || i} style={S.matRow}>
+                  <div style={S.matNum}>{i + 1}</div>
+                  <div style={S.matInfo}>
+                    <div style={S.matTitle}>{m.title}</div>
+                    <div style={S.matMeta}>
+                      <span style={S.catTag}>{m.category || "Umumiy"}</span>
+                      {m.description && <span style={S.matDesc}>{m.description.slice(0, 60)}...</span>}
+                    </div>
+                  </div>
+                  <button style={S.delBtn} onClick={() => handleDeleteMaterial(m.id)} title="O'chirish">
+                    <IcoX size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -160,71 +263,41 @@ const S = {
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" },
   title: { fontSize: "24px", fontWeight: 700, color: "var(--text-h)", margin: "0 0 4px" },
   sub:   { fontSize: "14px", color: "var(--text)" },
-  adminBadge: {
-    display: "flex", alignItems: "center", gap: "7px",
-    background: "var(--accent-light)", color: "var(--accent)",
-    borderRadius: "99px", padding: "7px 16px",
-    fontSize: "13px", fontWeight: 700,
-  },
-
+  adminBadge: { display: "flex", alignItems: "center", gap: "7px", background: "var(--accent-light)", color: "var(--accent)", borderRadius: "99px", padding: "7px 16px", fontSize: "13px", fontWeight: 700 },
   statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))", gap: "16px" },
-  stat: {
-    background: "var(--card-bg)", borderRadius: "var(--radius-md)",
-    padding: "18px 20px", display: "flex", alignItems: "center", gap: "14px",
-    boxShadow: "var(--shadow-sm)",
-  },
+  stat: { background: "var(--card-bg)", borderRadius: "var(--radius-md)", padding: "18px 20px", display: "flex", alignItems: "center", gap: "14px", boxShadow: "var(--shadow-sm)" },
   statIcon: { width: "42px", height: "42px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   statVal:   { fontSize: "22px", fontWeight: 800, color: "var(--text-h)", lineHeight: 1 },
   statLabel: { fontSize: "12px", color: "var(--text-muted)", marginTop: "3px", fontWeight: 600 },
-
-  cols: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" },
+  tabs: { display: "flex", gap: "8px" },
+  tab: { padding: "9px 20px", border: "1.5px solid var(--border)", borderRadius: "99px", background: "var(--card-bg)", fontSize: "13px", fontWeight: 600, color: "var(--text)", cursor: "pointer" },
+  tabActive: { background: "var(--accent-light)", borderColor: "var(--accent)", color: "var(--accent)" },
   card: { background: "var(--card-bg)", borderRadius: "var(--radius-lg)", padding: "24px", boxShadow: "var(--shadow-md)" },
-  cardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" },
+  cardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },
   cardTitle: { fontSize: "15px", fontWeight: 700, color: "var(--text-h)", margin: "0 0 16px" },
-  countPill: {
-    background: "var(--accent-light)", color: "var(--accent)",
-    borderRadius: "99px", padding: "3px 10px", fontSize: "12px", fontWeight: 700,
-  },
-
-  actions: { display: "flex", flexDirection: "column", gap: "10px" },
-  actionBtn: {
-    display: "flex", alignItems: "center", gap: "12px",
-    padding: "12px 14px",
-    background: "#fafafa", border: "1.5px solid var(--border)",
-    borderRadius: "var(--radius-md)",
-    cursor: "pointer", transition: "background 0.15s", width: "100%",
-  },
-  actionIcon: { width: "34px", height: "34px", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  actionLabel: { fontSize: "13px", fontWeight: 600, color: "var(--text-h)" },
-
-  list: { display: "flex", flexDirection: "column", gap: "0" },
-  userRow: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid var(--border)" },
-  userAvatar: {
-    width: "36px", height: "36px", borderRadius: "50%",
-    background: "linear-gradient(135deg,#aa3bff,#7c3aed)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    color: "#fff", fontSize: "14px", fontWeight: 700, flexShrink: 0,
-  },
-  userInfo: { flex: 1 },
+  addBtn: { display: "flex", alignItems: "center", gap: "7px", padding: "8px 16px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+  form: { background: "#f8f9fb", borderRadius: "10px", padding: "16px", marginBottom: "20px", border: "1.5px solid var(--border)" },
+  formRow: { display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" },
+  formErr: { background: "#fef2f2", color: "#dc2626", padding: "8px 12px", borderRadius: "6px", fontSize: "13px", marginBottom: "10px" },
+  inp: { flex: 1, padding: "9px 12px", border: "1.5px solid var(--border)", borderRadius: "7px", fontSize: "13px", outline: "none", minWidth: "140px" },
+  saveBtn: { padding: "9px 20px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: "pointer" },
+  cancelBtn: { padding: "9px 16px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: "7px", fontSize: "13px", cursor: "pointer" },
+  list: { display: "flex", flexDirection: "column" },
+  userRow: { display: "flex", alignItems: "center", gap: "12px", padding: "12px 0", borderBottom: "1px solid var(--border)" },
+  userAvatar: { width: "38px", height: "38px", borderRadius: "50%", background: "linear-gradient(135deg,#aa3bff,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "15px", fontWeight: 700, flexShrink: 0 },
+  userInfo: { flex: 1, minWidth: 0 },
   userName: { fontSize: "13px", fontWeight: 700, color: "var(--text-h)" },
-  userRole: { fontSize: "11px", color: "var(--text-muted)", textTransform: "capitalize" },
-  badge: { borderRadius: "99px", padding: "3px 10px", fontSize: "11px", fontWeight: 700 },
-
-  matRow: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid var(--border)" },
-  matNum: {
-    width: "28px", height: "28px", borderRadius: "7px",
-    background: "var(--accent-light)", color: "var(--accent)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: "12px", fontWeight: 700, flexShrink: 0,
-  },
+  userMeta: { display: "flex", alignItems: "center", gap: "8px", marginTop: "3px" },
+  userUsername: { fontSize: "11px", color: "var(--text-muted)" },
+  deptTag: { borderRadius: "99px", padding: "2px 8px", fontSize: "10px", fontWeight: 700 },
+  delBtn: { background: "#fef2f2", color: "#dc2626", border: "none", borderRadius: "6px", padding: "6px", cursor: "pointer", display: "flex" },
+  matRow: { display: "flex", alignItems: "center", gap: "12px", padding: "12px 0", borderBottom: "1px solid var(--border)" },
+  matNum: { width: "28px", height: "28px", borderRadius: "7px", background: "var(--accent-light)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, flexShrink: 0 },
   matInfo: { flex: 1, minWidth: 0 },
   matTitle: { fontSize: "13px", fontWeight: 700, color: "var(--text-h)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  matUrl:   { fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  matBadge: {
-    background: "var(--accent-light)", color: "var(--accent)",
-    borderRadius: "99px", padding: "3px 10px", fontSize: "11px", fontWeight: 700, flexShrink: 0,
-  },
-
+  matMeta: { display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" },
+  catTag: { background: "var(--accent-light)", color: "var(--accent)", borderRadius: "99px", padding: "2px 8px", fontSize: "10px", fontWeight: 700, flexShrink: 0 },
+  matDesc: { fontSize: "11px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   loadingBox: { textAlign: "center", color: "var(--text-muted)", padding: "20px", fontSize: "14px" },
   emptyBox:   { textAlign: "center", color: "var(--text-muted)", padding: "24px", fontSize: "14px" },
   emptyIcon:  { display: "flex", justifyContent: "center", marginBottom: "8px" },

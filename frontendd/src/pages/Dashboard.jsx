@@ -20,15 +20,16 @@ const StatCard = ({ Icon, label, value, sub, color }) => (
 
 export default function Dashboard() {
   const [progress, setProgress] = useState({ total: 0, watched: 0, progress: 0 });
-  const username = localStorage.getItem("username") || "Foydalanuvchi";
+  const fullName   = localStorage.getItem("full_name") || localStorage.getItem("username") || "Xodim";
+  const department = localStorage.getItem("department") || "";
 
   useEffect(() => {
-    API.get("/progress/1")
+    API.get("/progress/me")
       .then(res => setProgress(res.data))
       .catch(() => {});
   }, []);
 
-  const pct = progress.progress || 0;
+  const pct       = progress.progress || 0;
   const remaining = progress.total - progress.watched;
 
   return (
@@ -36,23 +37,24 @@ export default function Dashboard() {
       {/* Welcome */}
       <div style={S.welcome}>
         <div>
-          <h1 style={S.welcomeTitle}>
-            Xush kelibsiz, {username}
-          </h1>
-          <p style={S.welcomeSub}>Bugun kiberhavfsizlik bo'yicha bilimlaringizni oshiring</p>
+          <h1 style={S.welcomeTitle}>Xush kelibsiz, {fullName}</h1>
+          <p style={S.welcomeSub}>
+            {department ? `${department} • ` : ""}
+            Bugun xavfsizlik siyosati bo'yicha bilimlaringizni oshiring
+          </p>
         </div>
         <div style={S.welcomeBadge}>
           <span style={S.badgeDot} />
-          Faol
+          Faol xodim
         </div>
       </div>
 
       {/* Stats */}
       <div style={S.statsGrid}>
-        <StatCard Icon={IcoPlay}     label="Ko'rilgan" value={progress.watched} sub="material"  color="#aa3bff" />
-        <StatCard Icon={IcoClock}    label="Qolgan"    value={remaining}         sub="material"  color="#f59e0b" />
-        <StatCard Icon={IcoLayers}   label="Jami"      value={progress.total}    sub="material"  color="#3b82f6" />
-        <StatCard Icon={IcoTrendUp}  label="Progress"  value={`${pct}%`}         sub="bajarildi" color="#10b981" />
+        <StatCard Icon={IcoPlay}    label="O'tilgan"  value={progress.watched} sub="dars"      color="#aa3bff" />
+        <StatCard Icon={IcoClock}   label="Qolgan"    value={remaining}        sub="dars"      color="#f59e0b" />
+        <StatCard Icon={IcoLayers}  label="Jami"      value={progress.total}   sub="dars"      color="#3b82f6" />
+        <StatCard Icon={IcoTrendUp} label="Progress"  value={`${pct}%`}        sub="bajarildi" color="#10b981" />
       </div>
 
       {/* Progress card */}
@@ -60,29 +62,23 @@ export default function Dashboard() {
         <div style={S.cardHead}>
           <div>
             <h2 style={S.cardTitle}>O'quv progressi</h2>
-            <p style={S.cardSub}>Siz jami materiallarning {pct}% ini tugatdingiz</p>
+            <p style={S.cardSub}>Siz xavfsizlik siyosati materiallarining {pct}% ini tugatdingiz</p>
           </div>
           <span style={{
             ...S.pill,
             background: pct === 100 ? "#10b98120" : "#aa3bff18",
             color: pct === 100 ? "#10b981" : "#aa3bff"
           }}>
-            {pct === 100
-              ? <><IcoCheck size={12} /> Tugallandi</>
-              : `${pct}%`
-            }
+            {pct === 100 ? <><IcoCheck size={12} /> Sertifikat tayyor</> : `${pct}%`}
           </span>
         </div>
-
         <div style={S.barTrack}>
           <div style={{ ...S.barFill, width: `${pct}%` }} />
         </div>
-
         <div style={S.barMeta}>
-          <span>{progress.watched} material ko'rilgan</span>
-          <span>{remaining} material qolgan</span>
+          <span>{progress.watched} dars o'tilgan</span>
+          <span>{remaining} dars qolgan</span>
         </div>
-
         <div style={S.milestones}>
           {[25, 50, 75, 100].map(m => (
             <div key={m} style={S.milestone}>
@@ -103,22 +99,22 @@ export default function Dashboard() {
           <div style={S.tipIconWrap}>
             <IcoTarget size={22} style={{ color: "#aa3bff" }} />
           </div>
-          <h3 style={S.tipTitle}>Bugungi maqsad</h3>
-          <p style={S.tipText}>Kamida 2 ta yangi material ko'ring va bilimingizni mustahkamlang</p>
+          <h3 style={S.tipTitle}>Bugungi vazifa</h3>
+          <p style={S.tipText}>Kamida 1 ta yangi xavfsizlik siyosati materialini o'qib, belgilang</p>
         </div>
         <div style={S.tipCard}>
           <div style={S.tipIconWrap}>
             <IcoAward size={22} style={{ color: "#f59e0b" }} />
           </div>
-          <h3 style={S.tipTitle}>Natijalar</h3>
-          <p style={S.tipText}>Quiz testini ishlang va o'z darajangizni aniqlang</p>
+          <h3 style={S.tipTitle}>Bilimingizni sinang</h3>
+          <p style={S.tipText}>Quiz bo'limida xavfsizlik siyosati bo'yicha test ishlang</p>
         </div>
         <div style={S.tipCard}>
           <div style={S.tipIconWrap}>
             <IcoShield size={22} style={{ color: "#10b981" }} />
           </div>
-          <h3 style={S.tipTitle}>Xavfsizlik</h3>
-          <p style={S.tipText}>Parol xavfsizligi bo'limini tekshiring va parolingizni yangilang</p>
+          <h3 style={S.tipTitle}>Ehtiyot bo'ling</h3>
+          <p style={S.tipText}>Shubhali elektron xat yoki havola ko'rsangiz, darhol IT bo'limiga xabar bering</p>
         </div>
       </div>
     </div>
@@ -127,11 +123,7 @@ export default function Dashboard() {
 
 const S = {
   page: { display: "flex", flexDirection: "column", gap: "24px" },
-
-  welcome: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    flexWrap: "wrap", gap: "12px",
-  },
+  welcome: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
   welcomeTitle: { fontSize: "26px", fontWeight: 700, color: "var(--text-h)", margin: "0 0 4px" },
   welcomeSub: { color: "var(--text)", fontSize: "14px" },
   welcomeBadge: {
@@ -140,92 +132,29 @@ const S = {
     borderRadius: "99px", padding: "6px 14px",
     fontSize: "13px", fontWeight: 600,
   },
-  badgeDot: {
-    width: "7px", height: "7px",
-    background: "#10b981", borderRadius: "50%",
-    display: "inline-block",
-  },
-
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-    gap: "16px",
-  },
-  stat: {
-    background: "var(--card-bg)",
-    borderRadius: "var(--radius-md)",
-    padding: "20px",
-    display: "flex", alignItems: "flex-start", gap: "14px",
-    boxShadow: "var(--shadow-sm)",
-  },
-  statIcon: {
-    width: "44px", height: "44px",
-    borderRadius: "var(--radius-sm)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    flexShrink: 0,
-  },
+  badgeDot: { width: "7px", height: "7px", background: "#10b981", borderRadius: "50%", display: "inline-block" },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px" },
+  stat: { background: "var(--card-bg)", borderRadius: "var(--radius-md)", padding: "20px", display: "flex", alignItems: "flex-start", gap: "14px", boxShadow: "var(--shadow-sm)" },
+  statIcon: { width: "44px", height: "44px", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   statBody: {},
   statValue: { fontSize: "24px", fontWeight: 700, color: "var(--text-h)", lineHeight: 1 },
   statLabel: { fontSize: "13px", fontWeight: 600, color: "var(--text)", marginTop: "4px" },
   statSub:   { fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" },
-
-  card: {
-    background: "var(--card-bg)",
-    borderRadius: "var(--radius-lg)",
-    padding: "28px",
-    boxShadow: "var(--shadow-md)",
-  },
-  cardHead: {
-    display: "flex", justifyContent: "space-between",
-    alignItems: "flex-start", marginBottom: "20px", gap: "12px",
-  },
+  card: { background: "var(--card-bg)", borderRadius: "var(--radius-lg)", padding: "28px", boxShadow: "var(--shadow-md)" },
+  cardHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", gap: "12px" },
   cardTitle: { fontSize: "17px", fontWeight: 700, margin: "0 0 4px" },
   cardSub: { fontSize: "13px", color: "var(--text)" },
-  pill: {
-    borderRadius: "99px", padding: "5px 12px",
-    fontSize: "13px", fontWeight: 600, flexShrink: 0,
-    display: "flex", alignItems: "center", gap: "5px",
-  },
-
+  pill: { borderRadius: "99px", padding: "5px 12px", fontSize: "13px", fontWeight: 600, flexShrink: 0, display: "flex", alignItems: "center", gap: "5px" },
   barTrack: { height: "10px", background: "var(--border)", borderRadius: "99px", overflow: "hidden" },
-  barFill: {
-    height: "100%",
-    background: "linear-gradient(90deg, #aa3bff, #7c3aed)",
-    borderRadius: "99px",
-    transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)",
-  },
-  barMeta: {
-    display: "flex", justifyContent: "space-between",
-    fontSize: "12px", color: "var(--text-muted)", marginTop: "10px",
-  },
-
-  milestones: {
-    display: "flex", justifyContent: "space-between",
-    marginTop: "20px", paddingTop: "20px",
-    borderTop: "1px solid var(--border)",
-  },
+  barFill: { height: "100%", background: "linear-gradient(90deg, #aa3bff, #7c3aed)", borderRadius: "99px", transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)" },
+  barMeta: { display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-muted)", marginTop: "10px" },
+  milestones: { display: "flex", justifyContent: "space-between", marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--border)" },
   milestone: { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" },
   msDot: { width: "10px", height: "10px", borderRadius: "50%", transition: "all 0.3s" },
   msLabel: { fontSize: "11px", fontWeight: 600, transition: "color 0.3s" },
-
-  tipsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-    gap: "16px",
-  },
-  tipCard: {
-    background: "var(--card-bg)",
-    borderRadius: "var(--radius-md)",
-    padding: "20px",
-    boxShadow: "var(--shadow-sm)",
-  },
-  tipIconWrap: {
-    width: "40px", height: "40px",
-    background: "var(--accent-light)",
-    borderRadius: "10px",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    marginBottom: "12px",
-  },
+  tipsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" },
+  tipCard: { background: "var(--card-bg)", borderRadius: "var(--radius-md)", padding: "20px", boxShadow: "var(--shadow-sm)" },
+  tipIconWrap: { width: "40px", height: "40px", background: "var(--accent-light)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" },
   tipTitle: { fontSize: "14px", fontWeight: 700, color: "var(--text-h)", margin: "0 0 6px" },
   tipText:  { fontSize: "13px", color: "var(--text)", lineHeight: 1.5 },
 };

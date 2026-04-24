@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"Set-Location 'D:\\\\securEdu\\\\frontendd'; npm run dev\")",
+      "Bash(\"./venv/Scripts/python.exe\" init_user.py)",
+      "Bash(\"./venv/Scripts/python.exe\" init_materials.py)",
+      "Bash(curl -s http://localhost:5173)"
+    ]
+  }
+}
