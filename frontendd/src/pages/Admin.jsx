@@ -21,6 +21,7 @@ function deptColor(dept) {
 export default function Admin() {
   const [users,     setUsers]     = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [questions, setQuestions] = useState([]);
   const [stats,     setStats]     = useState({ total_users: 0, total_materials: 0, completed_users: 0 });
   const [loading,   setLoading]   = useState(true);
   const [tab,       setTab]       = useState("users");
@@ -30,6 +31,12 @@ export default function Admin() {
   const [form,      setForm]      = useState({ username: "", password: "", full_name: "", department: "", role: "employee" });
   const [formErr,   setFormErr]   = useState("");
   const [saving,    setSaving]    = useState(false);
+
+  // Add question form
+  const [showQForm, setShowQForm] = useState(false);
+  const [qForm,     setQForm]     = useState({ question: "", option_a: "", option_b: "", option_c: "", answer: "0", explanation: "", category: "Xavfsizlik Siyosati" });
+  const [qErr,      setQErr]      = useState("");
+  const [qSaving,   setQSaving]   = useState(false);
 
   // Add material form
   const [showMatForm, setShowMatForm] = useState(false);
@@ -42,10 +49,12 @@ export default function Admin() {
     Promise.all([
       API.get("/users").catch(() => ({ data: [] })),
       API.get("/materials").catch(() => ({ data: [] })),
+      API.get("/questions").catch(() => ({ data: [] })),
       API.get("/stats").catch(() => ({ data: { total_users: 0, total_materials: 0, completed_users: 0 } })),
-    ]).then(([u, m, s]) => {
+    ]).then(([u, m, q, s]) => {
       setUsers(u.data);
       setMaterials(m.data);
+      setQuestions(q.data);
       setStats(s.data);
     }).finally(() => setLoading(false));
   };
@@ -84,6 +93,33 @@ export default function Admin() {
     } finally { setMatSaving(false); }
   };
 
+  const handleAddQuestion = async () => {
+    if (!qForm.question || !qForm.option_a || !qForm.option_b || !qForm.option_c) {
+      setQErr("Savol va kamida 3 ta variant majburiy"); return;
+    }
+    setQSaving(true); setQErr("");
+    try {
+      await API.post("/questions", {
+        question:    qForm.question,
+        options:     [qForm.option_a, qForm.option_b, qForm.option_c],
+        answer:      parseInt(qForm.answer),
+        explanation: qForm.explanation || null,
+        category:    qForm.category,
+      });
+      setQForm({ question: "", option_a: "", option_b: "", option_c: "", answer: "0", explanation: "", category: "Xavfsizlik Siyosati" });
+      setShowQForm(false);
+      fetchAll();
+    } catch (e) {
+      setQErr(e.response?.data?.detail || "Xatolik");
+    } finally { setQSaving(false); }
+  };
+
+  const handleDeleteQuestion = async (id) => {
+    if (!window.confirm("Savolni o'chirasizmi?")) return;
+    await API.delete(`/questions/${id}`).catch(() => {});
+    fetchAll();
+  };
+
   const handleDeleteMaterial = async (id) => {
     if (!window.confirm("Materialni o'chirasizmi?")) return;
     await API.delete(`/materials/${id}`).catch(() => {});
@@ -94,7 +130,7 @@ export default function Admin() {
     { label: "Xodimlar",          value: loading ? "..." : stats.total_users,     color: "#aa3bff", Icon: IcoUsers },
     { label: "Materiallar",       value: loading ? "..." : stats.total_materials, color: "#3b82f6", Icon: IcoBook },
     { label: "Tugatgan xodimlar", value: loading ? "..." : stats.completed_users, color: "#10b981", Icon: IcoCheckCircle },
-    { label: "Quiz savollar",     value: "10",                                    color: "#f59e0b", Icon: IcoBarChart },
+    { label: "Quiz savollar",     value: loading ? "..." : questions.length,       color: "#f59e0b", Icon: IcoBarChart },
   ];
 
   return (
@@ -125,6 +161,7 @@ export default function Admin() {
         {[
           { key: "users",     label: `Xodimlar (${users.filter(u => u.role !== "admin").length})` },
           { key: "materials", label: `Materiallar (${materials.length})` },
+          { key: "questions", label: `Quiz Savollar (${questions.length})` },
         ].map(t => (
           <button key={t.key} style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }} onClick={() => setTab(t.key)}>
             {t.label}
@@ -254,6 +291,94 @@ export default function Admin() {
           )}
         </div>
       )}
+      {/* QUESTIONS TAB */}
+      {tab === "questions" && (
+        <div style={S.card}>
+          <div style={S.cardHead}>
+            <h3 style={{ ...S.cardTitle, margin: 0 }}>Quiz Savollar</h3>
+            <button style={S.addBtn} onClick={() => setShowQForm(v => !v)}>
+              <IcoPlus size={14} /> Savol qo'shish
+            </button>
+          </div>
+
+          {showQForm && (
+            <div style={S.form}>
+              {qErr && <div style={S.formErr}>{qErr}</div>}
+              <textarea
+                style={{ ...S.inp, width: "100%", minHeight: "72px", resize: "vertical", marginBottom: "10px" }}
+                placeholder="Savol matni *"
+                value={qForm.question}
+                onChange={e => setQForm(f => ({ ...f, question: e.target.value }))}
+              />
+              <div style={S.formRow}>
+                <div style={S.optWrap}>
+                  <span style={S.optLabel}>A</span>
+                  <input style={S.inp} placeholder="Variant A *" value={qForm.option_a} onChange={e => setQForm(f => ({ ...f, option_a: e.target.value }))} />
+                </div>
+                <div style={S.optWrap}>
+                  <span style={S.optLabel}>B</span>
+                  <input style={S.inp} placeholder="Variant B *" value={qForm.option_b} onChange={e => setQForm(f => ({ ...f, option_b: e.target.value }))} />
+                </div>
+              </div>
+              <div style={S.formRow}>
+                <div style={S.optWrap}>
+                  <span style={S.optLabel}>C</span>
+                  <input style={S.inp} placeholder="Variant C *" value={qForm.option_c} onChange={e => setQForm(f => ({ ...f, option_c: e.target.value }))} />
+                </div>
+                <div style={S.optWrap}>
+                  <span style={{ ...S.optLabel, background: "#10b981" }}>✓</span>
+                  <select style={S.inp} value={qForm.answer} onChange={e => setQForm(f => ({ ...f, answer: e.target.value }))}>
+                    <option value="0">To'g'ri javob: A</option>
+                    <option value="1">To'g'ri javob: B</option>
+                    <option value="2">To'g'ri javob: C</option>
+                  </select>
+                </div>
+              </div>
+              <div style={S.formRow}>
+                <input style={S.inp} placeholder="Izoh (ixtiyoriy)" value={qForm.explanation} onChange={e => setQForm(f => ({ ...f, explanation: e.target.value }))} />
+                <select style={S.inp} value={qForm.category} onChange={e => setQForm(f => ({ ...f, category: e.target.value }))}>
+                  <option>Xavfsizlik Siyosati</option>
+                  <option>Fishing va Firibgarlik</option>
+                  <option>Parol Xavfsizligi</option>
+                  <option>Qurilma Xavfsizligi</option>
+                  <option>Hodisa Boshqaruvi</option>
+                  <option>Umumiy</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                <button style={S.saveBtn} onClick={handleAddQuestion} disabled={qSaving}>{qSaving ? "..." : "Saqlash"}</button>
+                <button style={S.cancelBtn} onClick={() => setShowQForm(false)}>Bekor</button>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div style={S.loadingBox}>Yuklanmoqda...</div>
+          ) : questions.length === 0 ? (
+            <div style={S.emptyBox}><div style={S.emptyIcon}><IcoInbox size={28} /></div><p>Savollar yo'q</p></div>
+          ) : (
+            <div style={S.list}>
+              {questions.map((q, i) => (
+                <div key={q.id || i} style={S.qRow}>
+                  <div style={S.matNum}>{i + 1}</div>
+                  <div style={S.matInfo}>
+                    <div style={S.matTitle}>{q.question}</div>
+                    <div style={S.matMeta}>
+                      <span style={S.catTag}>{q.category || "Umumiy"}</span>
+                      {(q.options || []).map((opt, oi) => (
+                        <span key={oi} style={{ ...S.optChip, background: oi === q.answer ? "#10b98118" : undefined, color: oi === q.answer ? "#10b981" : undefined, border: oi === q.answer ? "1px solid #10b98133" : undefined }}>
+                          {["A","B","C"][oi]}: {opt}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <button style={S.delBtn} onClick={() => handleDeleteQuestion(q.id)}><IcoX size={13} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -301,4 +426,8 @@ const S = {
   loadingBox: { textAlign: "center", color: "var(--text-muted)", padding: "20px", fontSize: "14px" },
   emptyBox:   { textAlign: "center", color: "var(--text-muted)", padding: "24px", fontSize: "14px" },
   emptyIcon:  { display: "flex", justifyContent: "center", marginBottom: "8px" },
+  qRow: { display: "flex", alignItems: "flex-start", gap: "12px", padding: "12px 0", borderBottom: "1px solid var(--border)" },
+  optWrap: { display: "flex", alignItems: "center", gap: "8px", flex: 1 },
+  optLabel: { width: "24px", height: "24px", borderRadius: "50%", background: "var(--accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, flexShrink: 0 },
+  optChip: { borderRadius: "99px", padding: "2px 8px", fontSize: "10px", fontWeight: 600, background: "var(--border)", color: "var(--text-muted)", border: "1px solid transparent" },
 };

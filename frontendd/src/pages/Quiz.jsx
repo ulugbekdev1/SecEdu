@@ -1,130 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import API from "../api";
 import { IcoAward, IcoStar, IcoBook, IcoCheck, IcoX, IcoInfo, IcoRefresh } from "../components/Icons";
 
-const questions = [
-  {
-    question: "Korporativ axborot xavfsizligi siyosatining asosiy maqsadi nima?",
-    options: [
-      "Internetni tezlashtirish",
-      "Kompaniya ma'lumotlari va tizimlarini himoya qilish",
-      "Xodimlarning ish vaqtini nazorat qilish",
-    ],
-    answer: 1,
-    explanation: "Xavfsizlik siyosati kompaniyaning maxfiy ma'lumotlari, tizimlari va resurslarini ruxsatsiz kirish, yo'qolish yoki buzilishdan himoya qilishga qaratilgan.",
-  },
-  {
-    question: "Fishing (phishing) elektron xatni qanday aniqlab olish mumkin?",
-    options: [
-      "Xatda kompaniya logotipi bor, demak xavfsiz",
-      "Shoshilinch talab, noto'g'ri manzil yoki shubhali havola mavjud",
-      "Elektron xat ingliz tilida yozilgan",
-    ],
-    answer: 1,
-    explanation: "Fishing xatlari ko'pincha: shoshilinch harakat talab qiladi, noto'g'ri domen manzilidan keladi, shaxsiy ma'lumot so'raydi yoki shubhali havolalar o'z ichiga oladi.",
-  },
-  {
-    question: "Korporativ parol siyosatiga ko'ra parol qanday bo'lishi shart?",
-    options: [
-      "Kamida 6 ta raqamdan iborat",
-      "Faqat katta harflardan iborat",
-      "Kamida 12 ta belgi, katta-kichik harf, raqam va maxsus belgidan iborat",
-    ],
-    answer: 2,
-    explanation: "Kuchli korporativ parol kamida 12 ta belgidan iborat bo'lib, turli xil belgilar kombinatsiyasini o'z ichiga olishi va boshqa hisoblar bilan takrorlanmasligi kerak.",
-  },
-  {
-    question: "Ish kompyuterida xavfsizlik hodisasi yuz berganda birinchi navbatda nima qilish kerak?",
-    options: [
-      "Muammoni o'zim hal qilishga harakat qilaman",
-      "Kompyuterni yopib, IT bo'limiga darhol xabar beraman",
-      "Hodisa haqida hamkasblarimga aytaman",
-    ],
-    answer: 1,
-    explanation: "Xavfsizlik hodisasida darhol IT xavfsizlik bo'limiga xabar berish kerak. O'z-o'zidan harakat qilish hodisani yanada kattalashtirishi mumkin.",
-  },
-  {
-    question: "Noma'lum USB flesh-xotira topib qoldingiz. Nima qilasiz?",
-    options: [
-      "Tarkibini ko'rish uchun ish kompyuteriga ulayman",
-      "Uni topib olgan joyda qoldiraman",
-      "IT bo'limiga yoki xavfsizlik xizmatiga topshiraman",
-    ],
-    answer: 2,
-    explanation: "Noma'lum USB qurilmalar qasddan qoldirilgan bo'lishi va zararli dastur o'z ichiga olishi mumkin ('USB drop attack'). Uni hech qachon ish kompyuteriga ulamang.",
-  },
-  {
-    question: "Ikki faktorli autentifikatsiya (2FA) nimani ta'minlaydi?",
-    options: [
-      "Parol o'rnini bosadi",
-      "Parolga qo'shimcha xavfsizlik qatlami — SMS yoki app kodi orqali",
-      "Tizimni sekinlashtiradi",
-    ],
-    answer: 1,
-    explanation: "2FA parol buzilgan taqdirda ham hisobni himoya qiladi. Ikkinchi omil (SMS, authenticator app) bo'lmasa, tajovuzkor kirisha olmaydi.",
-  },
-  {
-    question: "Ommaviy Wi-Fi tarmog'idan foydalanishda nima qilish kerak?",
-    options: [
-      "Korporativ hujjatlarni erkin yuklab olish mumkin",
-      "VPN ulash va maxfiy tizimlar bilan ishlamaslik",
-      "Parollarni bir joyda saqlash",
-    ],
-    answer: 1,
-    explanation: "Ommaviy Wi-Fi tarmoqlari shifrlangan emas va 'man-in-the-middle' hujumlariga moyil. VPN trafigingizni shifrlaydi va korporativ ma'lumotlaringizni himoya qiladi.",
-  },
-  {
-    question: "Maxfiy korporativ hujjatni tashqi shaxsga yuborishdan oldin nima kerak?",
-    options: [
-      "Menejerimdan ruxsat olaman va faqat zarur ma'lumotni yuboraman",
-      "Kerak bo'lsa yuboraveraman, vaqt yo'q",
-      "Ijtimoiy tarmoqda post qilaman",
-    ],
-    answer: 0,
-    explanation: "Korporativ ma'lumotlarni tashqariga yuborishdan oldin menejerdan ruxsat olish, minimal zarur ma'lumot yuborish va shifrlangan kanal (korporativ elektron pochta) ishlatish shart.",
-  },
-  {
-    question: "Ijtimoiy muhandislik (social engineering) hujumi qanday amalga oshiriladi?",
-    options: [
-      "Dasturiy zaifliklarni topib exploit ishlatish orqali",
-      "Odamlarni manipulyatsiya qilib, maxfiy ma'lumot olish orqali",
-      "Tarmoq trafikini ushlab qolish orqali",
-    ],
-    answer: 1,
-    explanation: "Ijtimoiy muhandislik texnik zaifliklardan emas, insoniy omillardan foydalanadi. Tajovuzkor o'zini IT xodimi, menejer yoki hamkor sifatida ko'rsatib, parol yoki ma'lumot olishga urinadi.",
-  },
-  {
-    question: "Ish kompyuteridan chiqishda (ofis, yig'ilish...) nima qilish kerak?",
-    options: [
-      "Ishim tugamagan, yopib o'tirmayman",
-      "Win+L yoki ekran qulfini faollashtiraman",
-      "Faqat brauzer tablarini yopaman",
-    ],
-    answer: 1,
-    explanation: "Kompyuterni har doim qulflash (Win+L) — 'clean desk policy'ning asosiy talabi. Qulflangan ekran ruxsatsiz kirishni oldini oladi.",
-  },
-];
-
 const getResult = (score, total) => {
-  const pct = (score / total) * 100;
+  const pct = total > 0 ? (score / total) * 100 : 0;
   if (pct === 100) return { label: "Mukammal!",         color: "#10b981", Icon: IcoAward, sub: "Siz xavfsizlik siyosatini a'lo bilasiz!" };
   if (pct >= 70)  return { label: "Yaxshi!",            color: "#aa3bff", Icon: IcoStar,  sub: "Bilimingizni yanada mustahkamlang!" };
   return               { label: "Yana urinib ko'ring", color: "#f59e0b", Icon: IcoBook,  sub: "Materiallarni o'qib, qaytadan ishlang!" };
 };
 
 export default function Quiz() {
-  const [current,  setCurrent]  = useState(0);
-  const [score,    setScore]    = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [answered, setAnswered] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [current,   setCurrent]   = useState(0);
+  const [score,     setScore]     = useState(0);
+  const [selected,  setSelected]  = useState(null);
+  const [answered,  setAnswered]  = useState(false);
+  const [finished,  setFinished]  = useState(false);
 
-  const q = questions[current];
+  useEffect(() => {
+    API.get("/questions")
+      .then(res => setQuestions(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleAnswer = (i) => {
     if (answered) return;
     setSelected(i);
     setAnswered(true);
-    if (i === q.answer) setScore(s => s + 1);
+    if (i === questions[current].answer) setScore(s => s + 1);
   };
 
   const handleNext = () => {
@@ -142,6 +47,24 @@ export default function Quiz() {
     setSelected(null); setAnswered(false); setFinished(false);
   };
 
+  if (loading) return (
+    <div style={S.page}>
+      <div style={S.loadingWrap}>
+        <div style={S.spinner} />
+        <p style={{ color: "var(--text-muted)", marginTop: 12 }}>Savollar yuklanmoqda...</p>
+      </div>
+    </div>
+  );
+
+  if (questions.length === 0) return (
+    <div style={S.page}>
+      <div style={S.emptyWrap}>
+        <p style={S.emptyText}>Hozircha savollar yo'q. Admin panel orqali qo'shing.</p>
+      </div>
+    </div>
+  );
+
+  const q = questions[current];
   const pct = Math.round((current / questions.length) * 100);
   const result = getResult(score, questions.length);
 
@@ -167,8 +90,7 @@ export default function Quiz() {
             ))}
           </div>
           <button style={S.restartBtn} onClick={handleRestart}>
-            <IcoRefresh size={15} />
-            Qayta boshlash
+            <IcoRefresh size={15} /> Qayta boshlash
           </button>
         </div>
       </div>
@@ -194,24 +116,22 @@ export default function Quiz() {
       </div>
 
       <div style={S.card}>
-        <div style={S.qNum}>Savol {current + 1}</div>
+        <div style={S.qMeta}>
+          <span style={S.qNum}>Savol {current + 1}</span>
+          {q.category && <span style={S.qCat}>{q.category}</span>}
+        </div>
         <h2 style={S.question}>{q.question}</h2>
 
         <div style={S.options}>
-          {q.options.map((opt, i) => {
+          {(q.options || []).map((opt, i) => {
             let st = { ...S.option };
             if (answered) {
-              if (i === q.answer)                       st = { ...st, ...S.optionCorrect };
-              else if (i === selected)                  st = { ...st, ...S.optionWrong };
-              else                                      st = { ...st, ...S.optionDim };
+              if (i === q.answer)                     st = { ...st, ...S.optionCorrect };
+              else if (i === selected)                st = { ...st, ...S.optionWrong };
+              else                                    st = { ...st, ...S.optionDim };
             }
             return (
-              <button
-                key={i}
-                className={!answered ? "quiz-option" : ""}
-                style={st}
-                onClick={() => handleAnswer(i)}
-              >
+              <button key={i} className={!answered ? "quiz-option" : ""} style={st} onClick={() => handleAnswer(i)}>
                 <span style={{
                   ...S.optLetter,
                   ...(answered && i === q.answer ? S.optLetterCorrect : {}),
@@ -227,7 +147,7 @@ export default function Quiz() {
           })}
         </div>
 
-        {answered && (
+        {answered && q.explanation && (
           <div style={{
             ...S.explanation,
             background: selected === q.answer ? "rgba(16,185,129,0.08)" : "rgba(245,158,11,0.08)",
@@ -261,6 +181,10 @@ export default function Quiz() {
 
 const S = {
   page: { display: "flex", flexDirection: "column", gap: "20px" },
+  loadingWrap: { textAlign: "center", padding: "60px 0" },
+  spinner: { width: "36px", height: "36px", border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto" },
+  emptyWrap: { textAlign: "center", padding: "60px 0" },
+  emptyText: { color: "var(--text-muted)", fontSize: "15px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" },
   title: { fontSize: "24px", fontWeight: 700, color: "var(--text-h)", margin: "0 0 4px" },
   sub:   { fontSize: "14px", color: "var(--text)" },
@@ -271,7 +195,9 @@ const S = {
   barTrack: { height: "6px", background: "var(--border)", borderRadius: "99px", overflow: "hidden" },
   barFill: { height: "100%", background: "linear-gradient(90deg,#aa3bff,#7c3aed)", borderRadius: "99px", transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" },
   card: { background: "var(--card-bg)", borderRadius: "var(--radius-lg)", padding: "28px 28px 24px", boxShadow: "var(--shadow-md)" },
-  qNum: { fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--accent)", marginBottom: "10px", textTransform: "uppercase" },
+  qMeta: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" },
+  qNum: { fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--accent)", textTransform: "uppercase" },
+  qCat: { background: "var(--accent-light)", color: "var(--accent)", borderRadius: "99px", padding: "2px 10px", fontSize: "11px", fontWeight: 700 },
   question: { fontSize: "20px", fontWeight: 700, color: "var(--text-h)", margin: "0 0 24px", lineHeight: 1.4 },
   options: { display: "flex", flexDirection: "column", gap: "10px" },
   option: { display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px", border: "1.5px solid var(--border)", borderRadius: "var(--radius-md)", background: "#fafafa", cursor: "pointer", textAlign: "left", transition: "all 0.18s", width: "100%" },
@@ -297,5 +223,5 @@ const S = {
   scoreHint:   { color: "var(--text-muted)", fontSize: "14px", margin: 0 },
   breakdown:   { display: "flex", gap: "8px", marginTop: "4px", flexWrap: "wrap", justifyContent: "center" },
   dot: { width: "12px", height: "12px", borderRadius: "50%", transition: "background 0.3s" },
-  restartBtn: { marginTop: "12px", padding: "13px 28px", background: "linear-gradient(135deg,#aa3bff,#7c3aed)", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", fontSize: "14px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 16px rgba(170,59,255,0.3)" },
+  restartBtn: { marginTop: "12px", padding: "13px 28px", background: "linear-gradient(135deg,#aa3bff,#7c3aed)", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", fontSize: "14px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" },
 };
