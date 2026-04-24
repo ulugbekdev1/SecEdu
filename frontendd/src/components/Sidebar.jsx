@@ -26,6 +26,8 @@ export default function Sidebar() {
       <NavLink to="/quiz" style={linkStyle}>
         🧠 Quiz
       </NavLink>
+      <NavLink to="/passwor-guide" style={linkStyle}>
+      Password</NavLink>
 
       <NavLink to="/profile" style={linkStyle}>
         👤 Profile

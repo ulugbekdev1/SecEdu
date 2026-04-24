@@ -8,6 +8,7 @@ import Quiz from "./pages/Quiz";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
+import PassworGuide from "./pages/PassworGuide";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="quiz" element={<Quiz />} />
           <Route path="profile" element={<Profile />} />
           <Route path="admin" element={<Admin />} />
+          <Route path="/passwor-guide" element={<PassworGuide />} />
         </Route>
 
       </Routes>
