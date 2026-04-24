@@ -56,7 +56,7 @@ export default function Materials() {
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Xavfsizlik Materiallari</h1>
-          <p style={S.sub}>Video darslar orqali kiberhavfsizlikni o'rganing</p>
+          <p style={S.sub}>Video darslar orqali kiberxavfsizlikni o'rganing</p>
         </div>
         <div style={S.progressMini}>
           <div style={S.progressLabel}>

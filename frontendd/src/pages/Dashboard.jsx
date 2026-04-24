@@ -29,7 +29,7 @@ export default function Dashboard() {
       .catch(() => {});
   }, []);
 
-  const pct       = progress.progress || 0;
+  const pct = progress.progress || 0;
   const remaining = progress.total - progress.watched;
 
   return (

@@ -22,6 +22,7 @@ export default function Admin() {
   const [users,     setUsers]     = useState([]);
   const [materials, setMaterials] = useState([]);
   const [questions, setQuestions] = useState([]);
+  const [report,    setReport]    = useState([]);
   const [stats,     setStats]     = useState({ total_users: 0, total_materials: 0, completed_users: 0 });
   const [loading,   setLoading]   = useState(true);
   const [tab,       setTab]       = useState("users");
@@ -50,11 +51,13 @@ export default function Admin() {
       API.get("/users").catch(() => ({ data: [] })),
       API.get("/materials").catch(() => ({ data: [] })),
       API.get("/questions").catch(() => ({ data: [] })),
+      API.get("/admin/report").catch(() => ({ data: [] })),
       API.get("/stats").catch(() => ({ data: { total_users: 0, total_materials: 0, completed_users: 0 } })),
-    ]).then(([u, m, q, s]) => {
+    ]).then(([u, m, q, r, s]) => {
       setUsers(u.data);
       setMaterials(m.data);
       setQuestions(q.data);
+      setReport(r.data);
       setStats(s.data);
     }).finally(() => setLoading(false));
   };
@@ -162,6 +165,7 @@ export default function Admin() {
           { key: "users",     label: `Xodimlar (${users.filter(u => u.role !== "admin").length})` },
           { key: "materials", label: `Materiallar (${materials.length})` },
           { key: "questions", label: `Quiz Savollar (${questions.length})` },
+          { key: "report",    label: `Xodimlar Natijasi (${report.length})` },
         ].map(t => (
           <button key={t.key} style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }} onClick={() => setTab(t.key)}>
             {t.label}
@@ -379,6 +383,93 @@ export default function Admin() {
           )}
         </div>
       )}
+
+      {/* REPORT TAB */}
+      {tab === "report" && (
+        <div style={S.card}>
+          <div style={S.cardHead}>
+            <h3 style={{ ...S.cardTitle, margin: 0 }}>Xodimlar Natijasi</h3>
+            <span style={S.countPill}>{report.length} xodim</span>
+          </div>
+
+          {loading ? (
+            <div style={S.loadingBox}>Yuklanmoqda...</div>
+          ) : report.length === 0 ? (
+            <div style={S.emptyBox}><div style={S.emptyIcon}><IcoUsers size={28} /></div><p>Ma'lumot yo'q</p></div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {report.map((row) => {
+                const pct = row.materials.percent;
+                const barColor = pct === 100 ? "#10b981" : pct >= 50 ? "#aa3bff" : "#f59e0b";
+                const quizPct = row.quiz.last_total
+                  ? Math.round(row.quiz.last_score / row.quiz.last_total * 100)
+                  : null;
+                return (
+                  <div key={row.user.id} style={S.reportCard}>
+                    {/* Header */}
+                    <div style={S.reportHeader}>
+                      <div style={S.userAvatar}>{(row.user.full_name || "U")[0].toUpperCase()}</div>
+                      <div style={S.userInfo}>
+                        <div style={S.userName}>{row.user.full_name}</div>
+                        <div style={S.userMeta}>
+                          <span style={S.userUsername}>@{row.user.username}</span>
+                          {row.user.department && (
+                            <span style={{ ...S.deptTag, background: deptColor(row.user.department) + "18", color: deptColor(row.user.department) }}>
+                              {row.user.department}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Quiz badge */}
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {quizPct !== null ? (
+                          <div style={{ ...S.quizBadge, background: quizPct >= 70 ? "#10b98118" : "#f59e0b18", color: quizPct >= 70 ? "#10b981" : "#f59e0b", border: `1px solid ${quizPct >= 70 ? "#10b98133" : "#f59e0b33"}` }}>
+                            Test: {row.quiz.last_score}/{row.quiz.last_total} ({quizPct}%)
+                          </div>
+                        ) : (
+                          <div style={{ ...S.quizBadge, background: "#f3f4f6", color: "#9ca3af", border: "1px solid #e5e7eb" }}>
+                            Test topshirilmagan
+                          </div>
+                        )}
+                        {row.quiz.attempts > 0 && (
+                          <div style={S.attemptsNote}>{row.quiz.attempts} marta topshirgan</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div style={S.reportProgress}>
+                      <div style={S.reportProgressLabel}>
+                        <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Video darsliklar</span>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: barColor }}>
+                          {row.materials.watched}/{row.materials.total} ({pct}%)
+                        </span>
+                      </div>
+                      <div style={S.reportBar}>
+                        <div style={{ ...S.reportBarFill, width: `${pct}%`, background: barColor }} />
+                      </div>
+                    </div>
+
+                    {/* Materials detail */}
+                    <div style={S.matChips}>
+                      {row.materials.detail.map(m => (
+                        <span key={m.id} style={{
+                          ...S.matChip,
+                          background: m.watched ? "#10b98112" : "#f3f4f6",
+                          color:      m.watched ? "#10b981"   : "#9ca3af",
+                          border:     m.watched ? "1px solid #10b98130" : "1px solid #e5e7eb",
+                        }}>
+                          {m.watched ? "✓" : "○"} {m.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -430,4 +521,15 @@ const S = {
   optWrap: { display: "flex", alignItems: "center", gap: "8px", flex: 1 },
   optLabel: { width: "24px", height: "24px", borderRadius: "50%", background: "var(--accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, flexShrink: 0 },
   optChip: { borderRadius: "99px", padding: "2px 8px", fontSize: "10px", fontWeight: 600, background: "var(--border)", color: "var(--text-muted)", border: "1px solid transparent" },
+  countPill: { background: "var(--accent-light)", color: "var(--accent)", borderRadius: "99px", padding: "4px 12px", fontSize: "12px", fontWeight: 700 },
+  reportCard: { background: "#fafafa", borderRadius: "var(--radius-md)", padding: "16px 18px", border: "1.5px solid var(--border)", display: "flex", flexDirection: "column", gap: "12px" },
+  reportHeader: { display: "flex", alignItems: "center", gap: "12px" },
+  reportProgress: { display: "flex", flexDirection: "column", gap: "6px" },
+  reportProgressLabel: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  reportBar: { height: "8px", background: "var(--border)", borderRadius: "99px", overflow: "hidden" },
+  reportBarFill: { height: "100%", borderRadius: "99px", transition: "width 0.4s ease" },
+  matChips: { display: "flex", flexWrap: "wrap", gap: "6px" },
+  matChip: { borderRadius: "99px", padding: "3px 10px", fontSize: "11px", fontWeight: 600 },
+  quizBadge: { borderRadius: "8px", padding: "5px 12px", fontSize: "12px", fontWeight: 700, display: "inline-block" },
+  attemptsNote: { fontSize: "10px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" },
 };

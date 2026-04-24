@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 
 class Login(BaseModel):
@@ -24,3 +24,11 @@ class MaterialCreate(BaseModel):
 
 class PollCreate(BaseModel):
     question: str
+
+
+class QuestionCreate(BaseModel):
+    question: str
+    options: List[str]
+    answer: int
+    explanation: Optional[str] = None
+    category: str = "Umumiy"

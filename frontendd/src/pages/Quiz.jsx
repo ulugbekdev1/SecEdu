@@ -38,6 +38,7 @@ export default function Quiz() {
       setSelected(null);
       setAnswered(false);
     } else {
+      API.post(`/quiz-result?score=${score}&total=${questions.length}`).catch(() => {});
       setFinished(true);
     }
   };
