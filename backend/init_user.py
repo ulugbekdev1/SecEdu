@@ -5,7 +5,7 @@ from auth import hash_password
 db = SessionLocal()
 
 users = [
-    models.User(username="admin",    password=hash_password("Admin@2025"),  role="admin",    full_name="Administratsor",       department="IT"),
+    models.User(username="admin",    password=hash_password("Admin@2025"),  role="admin",    full_name="Administrator",       department="IT"),
     models.User(username="ali",      password=hash_password("Ali@1234"),    role="employee", full_name="Ali Karimov",           department="IT bo'limi"),
     models.User(username="malika",   password=hash_password("Malika@1234"), role="employee", full_name="Malika Yusupova",       department="Moliya bo'limi"),
     models.User(username="jasur",    password=hash_password("Jasur@1234"),  role="employee", full_name="Jasur Toshmatov",       department="HR bo'limi"),

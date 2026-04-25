@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import API from "../api";
 import {
   IcoUsers, IcoBook, IcoCheckCircle, IcoBarChart,
-  IcoPlus, IcoShield, IcoInbox, IcoX
+  IcoPlus, IcoShield, IcoInbox, IcoX, IcoUpload, IcoFile
 } from "../components/Icons";
 
 const DEPT_COLORS = {
@@ -42,8 +42,10 @@ export default function Admin() {
   // Add material form
   const [showMatForm, setShowMatForm] = useState(false);
   const [matForm,     setMatForm]     = useState({ title: "", video_url: "", description: "", category: "Xavfsizlik Siyosati" });
+  const [matFile,     setMatFile]     = useState(null);
   const [matErr,      setMatErr]      = useState("");
   const [matSaving,   setMatSaving]   = useState(false);
+  const matFileRef = useRef(null);
 
   const fetchAll = () => {
     setLoading(true);
@@ -84,11 +86,21 @@ export default function Admin() {
   };
 
   const handleAddMaterial = async () => {
-    if (!matForm.title || !matForm.video_url) { setMatErr("Sarlavha va video URL majburiy"); return; }
+    if (!matForm.title) { setMatErr("Sarlavha majburiy"); return; }
+    if (!matForm.video_url && !matFile) { setMatErr("Video URL yoki fayl kerak"); return; }
     setMatSaving(true); setMatErr("");
     try {
-      await API.post("/materials", matForm);
+      let file_path = null;
+      if (matFile) {
+        const fd = new FormData();
+        fd.append("file", matFile);
+        const r = await API.post("/upload-file", fd);
+        file_path = r.data.filename;
+      }
+      await API.post("/materials", { ...matForm, file_path });
       setMatForm({ title: "", video_url: "", description: "", category: "Xavfsizlik Siyosati" });
+      setMatFile(null);
+      if (matFileRef.current) matFileRef.current.value = "";
       setShowMatForm(false);
       fetchAll();
     } catch (e) {
@@ -261,11 +273,33 @@ export default function Admin() {
                   <option>Umumiy</option>
                 </select>
               </div>
-              <input style={{ ...S.inp, width: "100%", marginBottom: "10px" }} placeholder="YouTube URL *" value={matForm.video_url} onChange={e => setMatForm(f => ({ ...f, video_url: e.target.value }))} />
+              <input style={{ ...S.inp, width: "100%", marginBottom: "10px" }} placeholder="YouTube URL (ixtiyoriy)" value={matForm.video_url} onChange={e => setMatForm(f => ({ ...f, video_url: e.target.value }))} />
               <input style={{ ...S.inp, width: "100%", marginBottom: "10px" }} placeholder="Tavsif (ixtiyoriy)" value={matForm.description} onChange={e => setMatForm(f => ({ ...f, description: e.target.value }))} />
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button style={S.saveBtn} onClick={handleAddMaterial} disabled={matSaving}>{matSaving ? "..." : "Saqlash"}</button>
-                <button style={S.cancelBtn} onClick={() => setShowMatForm(false)}>Bekor</button>
+              {/* File upload */}
+              <div style={S.fileUploadBox}>
+                <label style={S.fileLabel}>
+                  <IcoUpload size={14} />
+                  <span>Fayl biriktirish (PDF, Word, ZIP...)</span>
+                  <input
+                    ref={matFileRef}
+                    type="file"
+                    style={{ display: "none" }}
+                    accept=".pdf,.doc,.docx,.pptx,.xlsx,.txt,.zip,.png,.jpg,.jpeg"
+                    onChange={e => setMatFile(e.target.files[0] || null)}
+                  />
+                </label>
+                {matFile && (
+                  <div style={S.fileChosen}>
+                    <IcoFile size={12} /> {matFile.name}
+                    <button style={S.fileRemove} onClick={() => { setMatFile(null); if (matFileRef.current) matFileRef.current.value = ""; }}>
+                      <IcoX size={10} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                <button style={S.saveBtn} onClick={handleAddMaterial} disabled={matSaving}>{matSaving ? "Yuklanmoqda..." : "Saqlash"}</button>
+                <button style={S.cancelBtn} onClick={() => { setShowMatForm(false); setMatFile(null); }}>Bekor</button>
               </div>
             </div>
           )}
@@ -522,6 +556,10 @@ const S = {
   optLabel: { width: "24px", height: "24px", borderRadius: "50%", background: "var(--accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, flexShrink: 0 },
   optChip: { borderRadius: "99px", padding: "2px 8px", fontSize: "10px", fontWeight: 600, background: "var(--border)", color: "var(--text-muted)", border: "1px solid transparent" },
   countPill: { background: "var(--accent-light)", color: "var(--accent)", borderRadius: "99px", padding: "4px 12px", fontSize: "12px", fontWeight: 700 },
+  fileUploadBox: { marginBottom: "4px" },
+  fileLabel: { display: "flex", alignItems: "center", gap: "8px", padding: "9px 14px", border: "1.5px dashed var(--border)", borderRadius: "7px", cursor: "pointer", fontSize: "13px", color: "var(--text-muted)", background: "#fafafa" },
+  fileChosen: { display: "flex", alignItems: "center", gap: "6px", marginTop: "6px", background: "var(--accent-light)", color: "var(--accent)", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", fontWeight: 600 },
+  fileRemove: { marginLeft: "auto", background: "none", border: "none", color: "var(--accent)", cursor: "pointer", display: "flex", padding: "1px" },
   reportCard: { background: "#fafafa", borderRadius: "var(--radius-md)", padding: "16px 18px", border: "1.5px solid var(--border)", display: "flex", flexDirection: "column", gap: "12px" },
   reportHeader: { display: "flex", alignItems: "center", gap: "12px" },
   reportProgress: { display: "flex", flexDirection: "column", gap: "6px" },

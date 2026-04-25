@@ -17,9 +17,10 @@ class Material(Base):
     __tablename__ = "materials"
     id = Column(Integer, primary_key=True)
     title = Column(String)
-    video_url = Column(String)
+    video_url = Column(String, nullable=True)
     description = Column(String, nullable=True)
     category = Column(String, default="Umumiy")
+    file_path = Column(String, nullable=True)
 
 
 class Progress(Base):

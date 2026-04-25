@@ -1,10 +1,16 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-import models
+from sqlalchemy import text
+import models, shutil, os
+from datetime import datetime
 from database import Base, engine
 from deps import get_db, get_current_user
 from auth import hash_password, verify, create_token
 from schemas import Login, UserCreate, MaterialCreate, QuestionCreate
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="Korporativ Xavfsizlik Platformasi")
 
@@ -19,6 +25,16 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+
+# Migration: add file_path column to existing DB
+with engine.connect() as _conn:
+    try:
+        _conn.execute(text("ALTER TABLE materials ADD COLUMN file_path VARCHAR"))
+        _conn.commit()
+    except Exception:
+        pass  # already exists
+
+app.mount("/files", StaticFiles(directory=UPLOAD_DIR), name="files")
 
 
 # ---------------- AUTH ----------------
@@ -93,6 +109,21 @@ def get_materials(db: Session = Depends(get_db)):
     return db.query(models.Material).all()
 
 
+@app.post("/upload-file")
+async def upload_file(file: UploadFile = File(...), current=Depends(get_current_user)):
+    if current.role != "admin":
+        raise HTTPException(status_code=403, detail="Ruxsat yo'q")
+    allowed = {".pdf", ".doc", ".docx", ".pptx", ".xlsx", ".txt", ".zip", ".png", ".jpg", ".jpeg"}
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in allowed:
+        raise HTTPException(status_code=400, detail="Ruxsat etilmagan fayl turi")
+    filename = f"{int(datetime.utcnow().timestamp())}_{file.filename}"
+    path = os.path.join(UPLOAD_DIR, filename)
+    with open(path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return {"filename": filename}
+
+
 @app.post("/materials")
 def create_material(data: MaterialCreate, db: Session = Depends(get_db), current=Depends(get_current_user)):
     if current.role != "admin":
@@ -102,6 +133,7 @@ def create_material(data: MaterialCreate, db: Session = Depends(get_db), current
         video_url=data.video_url,
         description=data.description,
         category=data.category,
+        file_path=data.file_path,
     )
     db.add(mat)
     db.commit()
@@ -175,9 +207,15 @@ def confirm(material_id: int, db: Session = Depends(get_db), current=Depends(get
 @app.get("/progress/me")
 def get_my_progress(db: Session = Depends(get_db), current=Depends(get_current_user)):
     total = db.query(models.Material).count()
-    watched = db.query(models.Progress).filter_by(user_id=current.id, watched=True).count()
-    percent = (watched / total * 100) if total > 0 else 0
-    return {"total": total, "watched": watched, "progress": round(percent, 2)}
+    rows = db.query(models.Progress).filter_by(user_id=current.id, watched=True).all()
+    watched_ids = [r.material_id for r in rows]
+    percent = (len(watched_ids) / total * 100) if total > 0 else 0
+    return {
+        "total": total,
+        "watched": len(watched_ids),
+        "progress": round(percent, 2),
+        "watched_ids": watched_ids,
+    }
 
 
 @app.get("/progress/{user_id}")

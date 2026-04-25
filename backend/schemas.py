@@ -17,9 +17,10 @@ class UserCreate(BaseModel):
 
 class MaterialCreate(BaseModel):
     title: str
-    video_url: str
+    video_url: Optional[str] = None
     description: Optional[str] = None
     category: str = "Umumiy"
+    file_path: Optional[str] = None
 
 
 class PollCreate(BaseModel):
